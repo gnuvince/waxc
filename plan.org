@@ -1,0 +1,248 @@
+* Overview
+The goal of this book is to provide the "dual" approach of the one
+adopted in most compiler textbooks.  For example, in the Dragon book
+(Aho et al.), the Tiger book (Appel), Cytron et al., etc. each chapter
+explores in great depth and details one phase of the compilation
+process, such as scanning, parsing, or analysis.  This is useful for
+people who are already familiar with the compilation process and want
+all the information neatly grouped together, however I feel very
+strongly that such organization is off-putting to people who don't
+know much, if anything, about compilers and wonder how a language is
+implemented and would like to know more.  It's hard to imagine that
+this person wants to read about NFA-to-DFA conversion and LR items and
+many other very complex subjects; more likely, they are looking to
+learn how one gets from source code to a machine-executable program.
+The faster we are able to provide a complete and concrete picture to
+that question, the more likely we are to capture their attention and
+whet their interest.
+
+Therefore, we have decided to organize this book in a more
+"breadth-first" manner; each chapter will present a complete compiler
+for a language that will become progressively more complete.  The
+tentative details of the chapters are described in the next sections.
+Below, we list some of the principles that will guide our approach.
+
+
+- Simplicity and ease of implementation trump all other
+  considerations.  This book's main target audience are programmers
+  who don't know how compilers work and want to learn: our main
+  objective is to convey the key ideas of the compilation process, not
+  to create a production-ready compiler.
+- Ideally, each chapter will introduce one new concept.  Combining
+  multiple concepts into one chapter is acceptable if they are related
+  and/or it would be awkward to split them up (e.g., scanning +
+  parsing or symbol table + type checking).
+- Each chapter should begin where the previous chapter left off and
+  build upon the code that already exists.  At the end of the chapter,
+  we should have a working compiler that improves upon the previous
+  version in some way.
+- Chapters should be written in such a way that we can work toward the
+  full solution rather than present it as-is.  For example, an early
+  chapter could have a single scope and thus use a simple dictionary
+  for the symbol table, and in a later chapter introduce nested
+  lexical scopes and discuss how that affects our earlier design
+  choice.
+
+** Implementation language options
+*** Python
+**** Pros
+- Common introductory language, offers a great opportunity to write
+  for people who are still new to programming
+- Useful data structures for a compiler (lists, dicts, sets)
+- Little structure necessary, allowing for simplifying shortcuts
+**** Cons
+- Dynamically typed, some techniques might be hard to implement for
+  people following with a statically-typed language such as Java
+- Enums require Python 3
+*** C
+**** Pros
+- Commonly used language for compiler projects
+**** Cons
+- No useful data structures in the standard library (lists, dicts,
+  sets)
+- Difficult to get memory management right
+*** JavaScript
+**** Pros
+- Mostly same pros as Python
+- Can be used in the browser, offering an option to make the document
+  more interactive (similar to the 6502 tutorial)
+**** Cons
+- JavaScript is a terrible language and I don't want to use it
+- Where do we output the code? How do we run it?
+*** Rust
+**** Pros
+- Interesting language for compiler work that can combine the
+  strengths of C with the strengths of ML
+- All the required data structures exist
+- Has sum and product types
+**** Cons
+- Not very well known, especially by new programmers
+- I don't know how well I'd handle some of the difficulties I would
+  have with the borrow checker
+*** OCaml
+**** Pros
+- Great language for compiler project
+- All the necessary data structures (list, sets, dicts) are in the
+  standard library
+- I've already done it multiple times
+**** Cons
+- Hardly anybody knows OCaml and/or functional programming
+
+** Target language options
+*** JVM bytecode
+**** Pros
+- Lends itself to a simple and principled code generation approach
+**** Cons
+- Requires JVM
+- It would feel "weird" to run C code on the JVM?
+- A bit more rigid than the assemblies, would require extra coverage
+  to discuss the extra rules (e.g., max stack height, equal stack
+  height on all branches, etc.)
+*** MIPS assembly
+**** Pros
+- Simpler assembly than x86
+- Common assembly taught in universities
+- Good open source simulators (SPIM and Mars)
+- Some syscalls can make some operations easier (e.g.,
+  reading/printing ints and floats)
+**** Cons
+- Can't be run on a reader's machine directly, can feel "less real"
+- It appears that sometimes code for SPIM doesn't work on Mars and
+  vice-versa
+*** x86 assembly
+**** Pros
+- Can run directly on people's machine, feels "more real"
+**** Cons
+- Pretty complicated language, I'm unsure that I can do a good job of
+  generating "good" x86 assembly
+- x86 or x86-64? calling convention?
+** Writing tool options
+*** noweb
+**** Pros
+- Flexible and mature literate programming tool
+- The code in the book and the actual compilers would always be in sync
+- The PDF of Ulix is gorgeous and producing such a beautiful document
+  would definitely be a source of pride
+**** Cons
+- It isn't clear how clean it would be to create multiple programs in
+  the same document; can we easily reuse or extend chunks from a
+  previous chapter?
+- The absence of a decent Emacs mode for noweb would make writing both
+  the LaTeX and the code more tedious
+*** org-mode
+**** Pros
+- Excellent writing tool (this plan is being written in org!)
+- Decent literate programming tool
+- The code snippets can be edited in their respective modes
+- The org language is less tedious than LaTeX
+**** Cons
+- I found the PDF output of literate programs uglier than the ones
+  generated by noweb; it uses a monospaced fonts for all code, even
+  chunk references, doesn't list the uses of the chunks, etc.
+*** LaTeX or markdown + on-disk programs
+**** Pros
+- Probably the simplest solution
+- Full fledged editor support for the text and the code
+**** Cons
+- It's very easy for the text and the code to fall out of sync
+- I could be tempted to not search for a simpler/shorter approach for
+  the sake of expediency if I'm able to leave some code out of the
+  text
+
+* Chapter 0 - Introduction
+- What is this book?
+- Prerequisites
+* Chapter 1 - Expressions
+** Overview
+The goal of the first chapter is to introduce the basics of lexing,
+parsing, and code generation.  The general compilation algorithm
+should look not too different from this:
+
+#+BEGIN_SRC fundamental
+  codegen(parse(tokens(stdin)))
+#+END_SRC
+
+The error handling strategy will be simple: exit with an error
+message.  Line numbers will not be stored in this chapter, we'll delay
+that for the next chapter.
+
+The scanner will be hand-written and will produce tokens for integers,
+basic arithmetic operators, parentheses, and semi-colons.
+
+A hand-written, recursive-descent predictive parser will transform a
+list of tokens into an AST.  At this point, the main pedagogical
+objective is to explain how a parser works and how to handle
+precedence.
+
+# Should we use multiple levels of mutual recursion or a less naive
+# approach?
+
+
+#+BEGIN_SRC fundamental
+  (* Lexical grammar *)
+  digit          ::= '0' | ... | '9'
+  integer        ::= { digit }
+
+  (* Syntactic grammar *)
+  program ::= { stmt }
+  stmt    ::= expr ';'
+  expr    ::= integer
+            | expr '+' expr
+            | expr '-' expr
+            | expr '*' expr
+            | expr '/' expr
+            | '(' expr ')'
+#+END_SRC
+** New concepts
+- Lexing
+- Parsing
+- Code generation
+
+* Chapter 2 - Line numbers
+The errors in chapter 1 simply said "syntax error" without an
+indication of where the error occurred.
+
+This chapter will show that the only place where that information can
+be acquired is in the lexer and that it will be necessary to pass it
+along to further phases.
+
+* Chapter 3 - Variables and keywords
+** Overview
+In this chapter we add variables and two keywords (/int/ and
+/print_int/); we will modify the scanner to recognize identifiers, the
+parser will extend the definition of a program to a list of
+declarations followed by a list of statements, and we add assignment
+to the list of statements.
+
+#+BEGIN_SRC fundamental
+  (* Lexical grammar *)
+  digit          ::= '0' | ... | '9'
+  non_zero_digit ::= '1' | ... | '9'
+  integer        ::= '0' | non_zero_digit { digit }
+  alpha          ::= '_' | 'a' | ... | 'z' | 'A' | ... | 'Z'
+  identifier     ::= alpha { alpha | digit }
+
+  (* Syntactic grammar *)
+  program ::= { decl } { stmt }
+  decl    ::= 'int' identifier ';' .
+  stmt    ::= identifier '=' expr ';'
+            | 'print_int' '(' expr ')' ';'
+  expr    ::= integer
+            | identifier
+            | expr '+' expr
+            | expr '-' expr
+            | expr '*' expr
+            | expr '/' expr
+            | '(' expr ')'
+#+END_SRC
+
+** New concepts
+- Symbol table
+
+* Chapter 4 - Interlude #2: EBNF
+With our first program written, we take a small detour to present EBNF
+syntax; this will be helpful in future chapters to describe what
+changes will be required to the lexer and/or parser.
+
+After a brief description, we'll give the EBNF definition for the
+language from the previous chapter.

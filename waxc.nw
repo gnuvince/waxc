@@ -1,0 +1,28 @@
+\section{First version}
+
+Our greeting will be the classic ``Hello world!'', popularized by
+Kernighan and Ritchie.
+
+<<greeting>>=
+print("Hello, world!")
+@
+
+Here is the first version.
+
+<<minic1.py>>=
+def main():
+    <<greeting>>
+
+if __name__ == "__main__":
+    main()
+@
+
+Oh, and why not have a farewell message as well?
+
+<<greeting>>=
+print("Ciao!")
+@
+
+\section{Conclusion}
+
+Farewell, and thanks for all the fish!
