@@ -1,7 +1,7 @@
-all: waxc.pdf waxc1.py
+all: waxc.pdf waxc0.py
 
 waxc.pdf: waxc.nw
-	noweave -index $< > waxc.tex
+	noweave -delay -index $< > waxc.tex
 	pdflatex waxc.tex
 	pdflatex waxc.tex
 
@@ -9,7 +9,7 @@ waxc.pdf: waxc.nw
 	notangle -R$@ $< > $@
 
 clean:
-	rm -f waxc.tex waxc.aux waxc.log waxc.pdf
+	rm -f *.log *.aux *.tex *.pdf *.out
 	rm -f waxc*.py
 
 .PHONY: clean

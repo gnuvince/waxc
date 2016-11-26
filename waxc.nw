@@ -1,28 +1,273 @@
-\section{First version}
+\documentclass{report}
 
-Our greeting will be the classic ``Hello world!'', popularized by
-Kernighan and Ritchie.
+\usepackage{noweb}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{listings}
+\usepackage[colorlinks,linkcolor=blue]{hyperref}
+\usepackage{parskip}
+%\usepackage{fullpage}
 
-<<greeting>>=
-print("Hello, world!")
+\newcommand{\wax}[1]{\emph{Wax#1}}
+\renewcommand{\sp}[0]{\textvisiblespace{}}
+\newcommand{\tok}[1]{$\langle$#1$\rangle$}
+
+\lstset{captionpos=b,
+        basicstyle=\ttfamily}
+
+\title{Compilers for Beginners}
+\author{Vincent Foley}
+
+\begin{document}
+
+\maketitle
+
+\chapter{Learning about compilers}
+
+
+\chapter{Basic arithmetic compiler}
+
+Our first compiler will translate a program written in \wax0%
+---the first version of \wax{C}---%
+into assembly.
+%
+A program in \wax0 is a list of basic arithmetic expressions terminated by semi-colons;
+the value of each expression is computed and printed on \emph{stdout}.
+%
+\autoref{lst:wax0-sample-program} shows an example program;
+it will display $-4$ and $429$ on two separate lines.
+
+
+\begin{lstlisting}[caption={An example \wax0 program}, label={lst:wax0-sample-program}]
+  7 - 11;
+  3 * (42 + 101);
+\end{lstlisting}
+
+Clearly, this is not a very complex programming language;
+many common features such as comments, variables, loops, and functions are absent.
+%
+Nevertheless, even such a small language can act as a large stepping stone
+into understanding compilers.
+
+In this chapter, we will split the compiler into three distinct phases:
+scanner, parser, and code generator.
+%
+These phases are part of all compilers,
+and we'll explain their role and their implementation in
+\autoref{sec:wax0-scanner}, \autoref{sec:wax0-parser}, and \autoref{sec:wax0-codegen}.
+
+\begin{lstlisting}
+digit  ::= "0" | ... | "9"
+intlit ::= digit { digit }
+
+program ::= { expr ";" }
+expr    ::= term { "+" term }
+          | term { "-" term }
+term    ::= factor { "*" factor }
+          | factor { "/" factor }
+factor  ::= intlit
+          | "(" expr ")"
+\end{lstlisting}
+
+
+\section{Scanner}
+\label{sec:wax0-scanner}
+
+The scanner, also called \textit{lexer} or \textit{tokenizer},
+is the first phase of the compilers.
+%
+It reads a stream of characters and produces a stream of \emph{tokens}.
+%
+A token is a data structure that represents a part of the input program;
+tokens in \wax0 have three fields: the category of the token, the line
+number of the token, and an optional associated value.
+
+
+The categories allow us to distinguish an integer literal from an opening parenthesis.
+%
+In the case of an integer literal token, the value field is the value of the integer;
+in the case of a left parenthesis token, the category
+%
+The line number is stored, because the scanner is the only phase that looks at the
+code that the programmer actually wrote; if we want to offer good error messages,
+the time to save information about file names and positions is now.
+
+
+
+\autoref{fig:wax0-tokens}
+
+\begin{figure}[htbp]
+    \begin{center}
+      \texttt{
+        \begin{tabular}{|*{16}{c|}}
+          \hline
+          3 & \sp & * & \sp & ( & 4 & 2 & \sp & + & \sp & 1 & 0 & 1 & ) & ; & \textbackslash{}n\\
+          \hline
+        \end{tabular}
+      }
+    \end{center}
+
+    ~
+    \begin{center}
+        $\Downarrow$
+    \end{center}
+    ~
+
+    \begin{center}
+      \texttt{
+        \begin{tabular}{|*{9}{c|}}
+          \hline
+          \tok{int,3} & \tok{star} &
+          \tok{lparen} & \tok{int,42} & \tok{plus} & \tok{int,101} & \tok{rparen} & \tok{semicolon} &
+          \tok{eof}
+          \\
+          \hline
+        \end{tabular}
+      }
+    \end{center}
+    \caption{Reading characters and producing tokens}
+    \label{fig:wax0-tokens}
+\end{figure}
+
+
+%
+\begin{itemize}
+\item it ignores blank characters;
+\item it ignores comments;
+\item it groups multiple individual characters into units.
+\end{itemize}
+
+
+
+
+Consider the two expressions in \autoref{lst:wax0-syntax-diff};
+although they \emph{look} different, they are in fact equivalent.
+%
+In \wax{C}, just as in C, whitespace is insignificant, except to separate tokens.
+%
+One of the jobs of the scanner is to discard whitespace.
+
+\begin{lstlisting}[caption={Syntactically different, but equivalent}, label={lst:wax0-syntax-diff}]
+3 * (42 + 101);
+
+         3
+*
+ (42 + 101);
+\end{lstlisting}
+
+
+
+
+The code in [[<<wax0 scanner>>]] shows the general structure of our scanner.
+%
+The tokens are stored, in order, in the [[toks]] variable.
+%
+Notice that we add an extra token, the end-of-file ([[eof]]) token to our return value.
+%
+Although not strictly necessary, having a special token to mark the end of the tokens
+turns out to be quite helpful in the parsing phase.
+
+<<wax0 scanner>>=
+<<scanner helpers>>
+def scan(input):
+    toks = []
+    line = 1
+    i = 0
+    while i < len(input):
+        <<skip whitespace>>
+        <<scan single-character tokens>>
+        <<scan integer literals>>
+        <<error if unrecognized character>>
+    toks.append(token(line, TokenCat.eof))
+    return toks
 @
 
-Here is the first version.
 
-<<minic1.py>>=
-def main():
-    <<greeting>>
+\wax{C} doesn't care about whitespace, except as a separator between different elements of the text.
+%
+This chunk skips over any whitespace, making sure to adjust the line number if the space character is a newline.
 
-if __name__ == "__main__":
-    main()
+<<skip whitespace>>=
+if input[i].isspace():
+    if input[i] == '\n':
+        line += 1
+    i += 1
 @
 
-Oh, and why not have a farewell message as well?
 
-<<greeting>>=
-print("Ciao!")
+This next chunk is a bit long, but it's easy to understand;
+we inspect the next character, and if it's one of the
+single-character tokens (parentheses, semi-colon, arithmetic operator),
+we record the appropriate token and move to the next character.
+
+<<scan single-character tokens>>=
+elif input[i] == '(':
+    toks.append(token(line, TokenCat.lparen))
+    i += 1
+elif input[i] == ')':
+    toks.append(token(line, TokenCat.rparen))
+    i += 1
+elif input[i] == ';':
+    toks.append(token(line, TokenCat.semicolon))
+    i += 1
+elif input[i] == '+':
+    toks.append(token(line, TokenCat.plus))
+    i += 1
+elif input[i] == '-':
+    toks.append(token(line, TokenCat.minus))
+    i += 1
+elif input[i] == '*':
+    toks.append(token(line, TokenCat.star))
+    i += 1
+elif input[i] == '/':
+    toks.append(token(line, TokenCat.slash))
+    i += 1
 @
 
-\section{Conclusion}
+<<scan integer literals>>=
+elif input[i].isdigit():
+    num_lexeme = ""
+    while i < len(input) and input[i].isdigit():
+        num_lexeme += input[i]
+        i += 1
+    toks.append(token(line, TokenCat.intlit, int(num_lexeme)))
+@
 
-Farewell, and thanks for all the fish!
+<<error if unrecognized character>>=
+else:
+    error("unrecognized character: {}".format(input[i]),
+        line=line)
+@
+
+<<scanner helpers>>=
+TokenCat = Enum("Token", ["lparen", "rparen", "semicolon",
+                          "plus", "minus", "star", "slash",
+                          "intlit", "eof"])
+
+def token(line, category, value=None):
+    return {"line": line,
+            "category": category,
+            "value": value}
+@
+
+<<compiler helpers>>=
+def error(msg, line=None):
+    print("error (line {}): ".format(line if line else "?") + msg)
+    sys.exit(1)
+@
+
+
+\section{Putting it all together}
+
+<<waxc0.py>>=
+import sys
+from enum import Enum
+
+<<compiler helpers>>
+<<wax0 scanner>>
+
+src = sys.stdin.read()
+print(scan(src))
+@
+
+\end{document}
