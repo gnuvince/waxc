@@ -197,6 +197,13 @@ precedence.
 - Lexing
 - Parsing
 - Code generation
+** EBNF notation
+With our first program written, we take a small detour to present EBNF
+syntax; this will be helpful in future chapters to describe what
+changes will be required to the lexer and/or parser.
+
+After a brief description, we'll give the EBNF definition for the
+language from the previous chapter.
 
 * Chapter 2 - Line numbers
 The errors in chapter 1 simply said "syntax error" without an
@@ -239,10 +246,4 @@ to the list of statements.
 ** New concepts
 - Symbol table
 
-* Chapter 4 - Interlude #2: EBNF
-With our first program written, we take a small detour to present EBNF
-syntax; this will be helpful in future chapters to describe what
-changes will be required to the lexer and/or parser.
-
-After a brief description, we'll give the EBNF definition for the
-language from the previous chapter.
+* Interlude #2: Intepretation
